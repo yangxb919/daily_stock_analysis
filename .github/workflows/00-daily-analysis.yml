@@ -348,6 +348,16 @@ jobs:
           # 自选股配置
           # ==========================================
           STOCK_LIST: ${{ vars.STOCK_LIST || secrets.STOCK_LIST || '600519' }}
+          # 动态热门板块龙头选股：默认开启；失败时回退 HOT_SECTOR_FALLBACK_STOCKS / STOCK_LIST
+          DYNAMIC_STOCK_SELECTION_ENABLED: ${{ vars.DYNAMIC_STOCK_SELECTION_ENABLED || secrets.DYNAMIC_STOCK_SELECTION_ENABLED || 'true' }}
+          HOT_SECTOR_TOP_N: ${{ vars.HOT_SECTOR_TOP_N || secrets.HOT_SECTOR_TOP_N || '3' }}
+          HOT_SECTOR_LEADERS_PER_SECTOR: ${{ vars.HOT_SECTOR_LEADERS_PER_SECTOR || secrets.HOT_SECTOR_LEADERS_PER_SECTOR || '2' }}
+          HOT_SECTOR_BOARD_TYPES: ${{ vars.HOT_SECTOR_BOARD_TYPES || secrets.HOT_SECTOR_BOARD_TYPES || 'industry,concept' }}
+          HOT_SECTOR_MIN_AMOUNT_YUAN: ${{ vars.HOT_SECTOR_MIN_AMOUNT_YUAN || secrets.HOT_SECTOR_MIN_AMOUNT_YUAN || '50000000' }}
+          HOT_SECTOR_MAX_SECTOR_CANDIDATES: ${{ vars.HOT_SECTOR_MAX_SECTOR_CANDIDATES || secrets.HOT_SECTOR_MAX_SECTOR_CANDIDATES || '12' }}
+          HOT_SECTOR_FALLBACK_STOCKS: ${{ vars.HOT_SECTOR_FALLBACK_STOCKS || secrets.HOT_SECTOR_FALLBACK_STOCKS || vars.STOCK_LIST || secrets.STOCK_LIST || '600519' }}
+          HOT_SECTOR_SELECTION_REPORT: reports/hot_sector_selection.md
+          HOT_SECTOR_SELECTION_JSON: data/hot_sector_selection.json
           MARKET_REVIEW_REGION: ${{ vars.MARKET_REVIEW_REGION || secrets.MARKET_REVIEW_REGION || 'cn' }}
           MARKET_REVIEW_COLOR_SCHEME: ${{ vars.MARKET_REVIEW_COLOR_SCHEME || secrets.MARKET_REVIEW_COLOR_SCHEME || 'green_up' }}
           
@@ -387,6 +397,31 @@ jobs:
 
           # 判断运行模式
           MODE="${{ github.event.inputs.mode || 'full' }}"
+
+          # 运行前动态选出“热门板块龙头”作为今日 STOCK_LIST（market-only 跳过）
+          DYNAMIC_ENABLED="$(printf '%s' "${DYNAMIC_STOCK_SELECTION_ENABLED:-true}" | tr '[:upper:]' '[:lower:]')"
+          if [ "$MODE" != "market-only" ] && [ "$DYNAMIC_ENABLED" != "false" ] && [ "$DYNAMIC_ENABLED" != "0" ] && [ "$DYNAMIC_ENABLED" != "no" ]; then
+            echo "🔥 启用热门板块龙头动态选股..."
+            SELECTED_STOCK_LIST=$(python scripts/select_hot_sector_leaders.py \
+              --top-sectors "${HOT_SECTOR_TOP_N:-3}" \
+              --leaders-per-sector "${HOT_SECTOR_LEADERS_PER_SECTOR:-2}" \
+              --board-types "${HOT_SECTOR_BOARD_TYPES:-industry,concept}" \
+              --min-amount-yuan "${HOT_SECTOR_MIN_AMOUNT_YUAN:-50000000}" \
+              --fallback-stocks "${HOT_SECTOR_FALLBACK_STOCKS:-$STOCK_LIST}" \
+              --max-sector-candidates "${HOT_SECTOR_MAX_SECTOR_CANDIDATES:-12}" \
+              --output "${HOT_SECTOR_SELECTION_REPORT:-reports/hot_sector_selection.md}" \
+              --json-output "${HOT_SECTOR_SELECTION_JSON:-data/hot_sector_selection.json}" \
+              --format csv)
+            if [ -n "$SELECTED_STOCK_LIST" ]; then
+              export STOCK_LIST="$SELECTED_STOCK_LIST"
+              echo "STOCK_LIST=$STOCK_LIST" >> "$GITHUB_ENV"
+              echo "✅ 今日动态 STOCK_LIST: $STOCK_LIST"
+            else
+              echo "⚠️ 动态选股没有返回结果，继续使用原 STOCK_LIST: $STOCK_LIST"
+            fi
+          else
+            echo "ℹ️ 动态选股已跳过（MODE=$MODE, DYNAMIC_STOCK_SELECTION_ENABLED=${DYNAMIC_STOCK_SELECTION_ENABLED:-true}）"
+          fi
           
           echo "=========================================="
           echo "🚀 A股自选股智能分析系统"
@@ -478,6 +513,7 @@ jobs:
           path: |
             reports/
             logs/
+            data/hot_sector_selection.json
           retention-days: 30
       
       - name: 显示运行结果

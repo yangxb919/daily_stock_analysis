@@ -151,6 +151,8 @@ class TrendAnalysisResult:
             'volume_trend': self.volume_trend,
             'support_ma5': self.support_ma5,
             'support_ma10': self.support_ma10,
+            'support_levels': self.support_levels,
+            'resistance_levels': self.resistance_levels,
             'buy_signal': self.buy_signal.value,
             'signal_score': self.signal_score,
             'signal_reasons': self.signal_reasons,

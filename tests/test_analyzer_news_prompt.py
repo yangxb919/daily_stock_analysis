@@ -478,6 +478,57 @@ class AnalyzerNewsPromptTestCase(unittest.TestCase):
         self.assertNotIn("超过5%必须标注\"严禁追高\"", prompt)
         self.assertNotIn("MA5>MA10>MA20为多头", prompt)
 
+    def test_format_prompt_includes_rich_technical_levels_for_operation_advice(self) -> None:
+        with patch.object(GeminiAnalyzer, "_init_litellm", return_value=None):
+            analyzer = GeminiAnalyzer(
+                skill_instructions="### 技能 1: 波段低吸\n- 看支撑压力",
+                default_skill_policy="",
+                use_legacy_default_prompt=False,
+            )
+
+        context = {
+            "code": "600519",
+            "stock_name": "贵州茅台",
+            "date": "2026-04-28",
+            "today": {"close": 1688.0, "ma5": 1675.0, "ma10": 1660.0, "ma20": 1640.0},
+            "trend_analysis": {
+                "trend_status": "震荡偏强",
+                "ma_alignment": "MA5>MA10>MA20",
+                "trend_strength": 68,
+                "current_price": 1688.0,
+                "bias_ma5": 0.78,
+                "bias_ma10": 1.69,
+                "bias_ma20": 2.93,
+                "volume_status": "温和放量",
+                "volume_ratio_5d": 1.42,
+                "volume_trend": "量价配合",
+                "support_levels": [1675.0, 1660.0, 1640.0],
+                "resistance_levels": [1718.5, 1760.0],
+                "macd_status": "多头",
+                "macd_signal": "DIF位于DEA上方",
+                "macd_dif": 12.3,
+                "macd_dea": 10.8,
+                "macd_bar": 3.0,
+                "rsi_status": "中性偏强",
+                "rsi_signal": "RSI强势但未超买",
+                "rsi_6": 62.1,
+                "rsi_12": 58.4,
+                "rsi_24": 55.0,
+                "buy_signal": "观察低吸",
+                "signal_score": 70,
+                "signal_reasons": ["贴近MA5支撑"],
+                "risk_factors": ["接近前高需放量确认"],
+            },
+        }
+        prompt = analyzer._format_prompt(context, "贵州茅台", news_context=None)
+
+        self.assertIn("近支撑位 | 1675.00、1660.00、1640.00", prompt)
+        self.assertIn("近压力位 | 1718.50、1760.00", prompt)
+        self.assertIn("MACD | 多头 | DIF位于DEA上方", prompt)
+        self.assertIn("RSI6/12/24 = 62.1 / 58.4 / 55.0", prompt)
+        self.assertIn("接近压力且无放量突破不得追买", prompt)
+        self.assertIn("具体触发条件、止损位、观察点", prompt)
+
     def test_format_prompt_removes_bullish_reasons_when_final_trend_is_bearish(self) -> None:
         with patch.object(GeminiAnalyzer, "_init_litellm", return_value=None):
             analyzer = GeminiAnalyzer(
