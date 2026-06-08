@@ -347,7 +347,7 @@ jobs:
           # ==========================================
           # 自选股配置
           # ==========================================
-          STOCK_LIST: ${{ vars.STOCK_LIST || secrets.STOCK_LIST || '600519' }}
+          STOCK_LIST: ${{ vars.STOCK_LIST || secrets.STOCK_LIST || '600519,000333,601318,601398,300750' }}
           # 动态热门板块龙头选股：默认开启；失败时回退 HOT_SECTOR_FALLBACK_STOCKS / STOCK_LIST
           DYNAMIC_STOCK_SELECTION_ENABLED: ${{ vars.DYNAMIC_STOCK_SELECTION_ENABLED || secrets.DYNAMIC_STOCK_SELECTION_ENABLED || 'true' }}
           HOT_SECTOR_TOP_N: ${{ vars.HOT_SECTOR_TOP_N || secrets.HOT_SECTOR_TOP_N || '3' }}
@@ -355,7 +355,7 @@ jobs:
           HOT_SECTOR_BOARD_TYPES: ${{ vars.HOT_SECTOR_BOARD_TYPES || secrets.HOT_SECTOR_BOARD_TYPES || 'industry,concept' }}
           HOT_SECTOR_MIN_AMOUNT_YUAN: ${{ vars.HOT_SECTOR_MIN_AMOUNT_YUAN || secrets.HOT_SECTOR_MIN_AMOUNT_YUAN || '50000000' }}
           HOT_SECTOR_MAX_SECTOR_CANDIDATES: ${{ vars.HOT_SECTOR_MAX_SECTOR_CANDIDATES || secrets.HOT_SECTOR_MAX_SECTOR_CANDIDATES || '12' }}
-          HOT_SECTOR_FALLBACK_STOCKS: ${{ vars.HOT_SECTOR_FALLBACK_STOCKS || secrets.HOT_SECTOR_FALLBACK_STOCKS || vars.STOCK_LIST || secrets.STOCK_LIST || '600519' }}
+          HOT_SECTOR_FALLBACK_STOCKS: ${{ vars.HOT_SECTOR_FALLBACK_STOCKS || secrets.HOT_SECTOR_FALLBACK_STOCKS || vars.STOCK_LIST || secrets.STOCK_LIST || '600519,000333,601318,601398,300750' }}
           HOT_SECTOR_SELECTION_REPORT: reports/hot_sector_selection.md
           HOT_SECTOR_SELECTION_JSON: data/hot_sector_selection.json
           MARKET_REVIEW_REGION: ${{ vars.MARKET_REVIEW_REGION || secrets.MARKET_REVIEW_REGION || 'cn' }}
