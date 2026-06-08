@@ -212,6 +212,20 @@ class TestEnhanceContextRealtimeOverride(unittest.TestCase):
             ma5=15.5,
             ma10=15.2,
             ma20=14.9,
+            ma60=14.0,
+            current_price=15.72,
+            bias_ma5=1.42,
+            bias_ma10=3.42,
+            bias_ma20=5.50,
+            volume_ratio_5d=1.8,
+            support_levels=[15.5, 15.2],
+            resistance_levels=[16.29],
+            macd_dif=0.42,
+            macd_dea=0.31,
+            macd_bar=0.22,
+            rsi_6=62.0,
+            rsi_12=58.0,
+            rsi_24=55.0,
         )
         enhanced = self.pipeline._enhance_context(
             context, quote, None, trend, "贵州茅台"
@@ -227,6 +241,14 @@ class TestEnhanceContextRealtimeOverride(unittest.TestCase):
         self.assertEqual(enhanced["today"]["realtime_source"], "tencent")
         self.assertIn("price_change_ratio", enhanced)
         self.assertIn("volume_change_ratio", enhanced)
+        self.assertEqual(enhanced["trend_analysis"]["current_price"], 15.72)
+        self.assertEqual(enhanced["trend_analysis"]["ma60"], 14.0)
+        self.assertEqual(enhanced["trend_analysis"]["bias_ma20"], 5.50)
+        self.assertEqual(enhanced["trend_analysis"]["volume_ratio_5d"], 1.8)
+        self.assertEqual(enhanced["trend_analysis"]["support_levels"], [15.5, 15.2])
+        self.assertEqual(enhanced["trend_analysis"]["resistance_levels"], [16.29])
+        self.assertEqual(enhanced["trend_analysis"]["macd_dif"], 0.42)
+        self.assertEqual(enhanced["trend_analysis"]["rsi_12"], 58.0)
 
     @patch("src.core.pipeline.get_market_now")
     @patch("src.core.pipeline.get_market_for_stock", return_value="cn")

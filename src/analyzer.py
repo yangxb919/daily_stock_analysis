@@ -720,6 +720,22 @@ def _sanitize_trend_analysis_for_prompt(
     return trend_dict
 
 
+def _format_price_level_list(levels: Any, *, limit: int = 3) -> str:
+    """Format support/resistance levels for prompt tables without fabricating values."""
+    if levels is None:
+        return "N/A"
+    if not isinstance(levels, (list, tuple)):
+        levels = [levels]
+    formatted: List[str] = []
+    for value in levels:
+        num = _safe_float(value, default=math.nan)
+        if math.isfinite(num) and num > 0:
+            formatted.append(f"{num:.2f}")
+        if len(formatted) >= limit:
+            break
+    return "、".join(formatted) if formatted else "N/A"
+
+
 def _derive_chip_health(profit_ratio: float, concentration_90: float, language: str = "zh") -> str:
     """Derive chip_health from profit_ratio and concentration_90."""
     if profit_ratio >= 0.9:
@@ -3115,6 +3131,8 @@ class GeminiAnalyzer:
                 context['trend_analysis'],
                 volume_change_ratio=context.get('volume_change_ratio'),
             )
+            support_levels_text = _format_price_level_list(trend.get('support_levels'))
+            resistance_levels_text = _format_price_level_list(trend.get('resistance_levels'))
             consistency_notes = trend.get('prompt_consistency_notes', [])
             if use_legacy_default_prompt:
                 bias_warning = "🚨 超过5%，严禁追高！" if trend.get('bias_ma5', 0) > 5 else "✅ 安全范围"
@@ -3125,9 +3143,14 @@ class GeminiAnalyzer:
 | 趋势状态 | {trend.get('trend_status', unknown_text)} | |
 | 均线排列 | {trend.get('ma_alignment', unknown_text)} | MA5>MA10>MA20为多头 |
 | 趋势强度 | {trend.get('trend_strength', 0)}/100 | |
+| 当前价 | {trend.get('current_price', 'N/A')} | 用于计算离支撑/压力距离 |
 | **乖离率(MA5)** | **{trend.get('bias_ma5', 0):+.2f}%** | {bias_warning} |
-| 乖离率(MA10) | {trend.get('bias_ma10', 0):+.2f}% | |
-| 量能状态 | {trend.get('volume_status', unknown_text)} | {trend.get('volume_trend', '')} |
+| 乖离率(MA10/MA20) | {trend.get('bias_ma10', 0):+.2f}% / {trend.get('bias_ma20', 0):+.2f}% | |
+| 近支撑位 | {support_levels_text} | 优先取MA5/MA10/MA20与近期低点 |
+| 近压力位 | {resistance_levels_text} | 近期高点/前高，接近压力不得追买 |
+| 量能状态 | {trend.get('volume_status', unknown_text)} | {trend.get('volume_trend', '')}；5日量比 {trend.get('volume_ratio_5d', 'N/A')} |
+| MACD | {trend.get('macd_status', unknown_text)} | {trend.get('macd_signal', '')}；DIF {trend.get('macd_dif', 'N/A')} / DEA {trend.get('macd_dea', 'N/A')} / BAR {trend.get('macd_bar', 'N/A')} |
+| RSI | {trend.get('rsi_status', unknown_text)} | RSI6/12/24 = {trend.get('rsi_6', 'N/A')} / {trend.get('rsi_12', 'N/A')} / {trend.get('rsi_24', 'N/A')}；{trend.get('rsi_signal', '')} |
 | 系统信号 | {trend.get('buy_signal', unknown_text)} | |
 | 系统评分 | {trend.get('signal_score', 0)}/100 | |
 
@@ -3157,9 +3180,14 @@ class GeminiAnalyzer:
 | 趋势状态 | {trend.get('trend_status', unknown_text)} | |
 | 均线排列 | {trend.get('ma_alignment', unknown_text)} | 结合激活技能判断结构强弱 |
 | 趋势强度 | {trend.get('trend_strength', 0)}/100 | |
+| 当前价 | {trend.get('current_price', 'N/A')} | 用于计算离支撑/压力距离 |
 | **价格位置(MA5)** | **{trend.get('bias_ma5', 0):+.2f}%** | {bias_warning} |
-| 价格位置(MA10) | {trend.get('bias_ma10', 0):+.2f}% | |
-| 量能状态 | {trend.get('volume_status', unknown_text)} | {trend.get('volume_trend', '')} |
+| 价格位置(MA10/MA20) | {trend.get('bias_ma10', 0):+.2f}% / {trend.get('bias_ma20', 0):+.2f}% | |
+| 近支撑位 | {support_levels_text} | 接近支撑且未破位才考虑低吸/持有 |
+| 近压力位 | {resistance_levels_text} | 接近压力且无放量突破不得追买 |
+| 量能状态 | {trend.get('volume_status', unknown_text)} | {trend.get('volume_trend', '')}；5日量比 {trend.get('volume_ratio_5d', 'N/A')} |
+| MACD | {trend.get('macd_status', unknown_text)} | {trend.get('macd_signal', '')}；DIF {trend.get('macd_dif', 'N/A')} / DEA {trend.get('macd_dea', 'N/A')} / BAR {trend.get('macd_bar', 'N/A')} |
+| RSI | {trend.get('rsi_status', unknown_text)} | RSI6/12/24 = {trend.get('rsi_6', 'N/A')} / {trend.get('rsi_12', 'N/A')} / {trend.get('rsi_24', 'N/A')}；{trend.get('rsi_signal', '')} |
 | 系统信号 | {trend.get('buy_signal', unknown_text)} | |
 | 系统评分 | {trend.get('signal_score', 0)}/100 | |
 
